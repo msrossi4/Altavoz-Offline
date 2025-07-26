@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-title" content="Amplificador Voz">
     <meta name="mobile-web-app-capable" content="yes">
     
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgZmlsbD0iIzY2N2VlYSIvPjx0ZXh0IHg9IjI1NiIgeT0iMzAwIiBmb250LXNpemU9IjIwMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0id2hpdGUiPvCfj6Q8L3RleHQ+PC9zdmc+">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiBmaWxsPSIjNjY3ZWVhIi8+PHRleHQgeD0iMjU2IiB5PSIzMDAiIGZvbnQtc2l6ZT0iMjAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSI+8J+PpHw8L3RleHQ+PC9zdmc+">
     
     <style>
         /* Reset y estilos base */
@@ -62,7 +62,7 @@
         }
 
         /* Mensajes de advertencia/información */
-        .https-warning, .offline-ready, .install-section {
+        .https-warning, .offline-ready, .install-section, .output-device-tip { /* Añadido .output-device-tip */
             border-radius: 10px;
             padding: 15px;
             margin-bottom: 20px;
@@ -90,6 +90,15 @@
             background: rgba(33, 150, 243, 0.2);
             border: 2px solid rgba(33, 150, 243, 0.5);
         }
+        
+        /* Nuevo estilo para el mensaje de dispositivo de salida */
+        .output-device-tip {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            font-size: 1em;
+            display: none; /* Oculto por defecto */
+        }
+
 
         /* Estado del amplificador */
         .status {
@@ -247,4 +256,125 @@
 
         /* Sección de información y configuración inicial */
         .info {
-            font-
+            font-size: 1em;
+            opacity: 0.9;
+            line-height: 1.6;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .info strong {
+            color: #FFE082;
+            font-size: 1.1em;
+        }
+
+        .microphone-icon {
+            font-size: 5em;
+            margin-bottom: 20px;
+            opacity: 0.8;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+            transition: transform 0.3s ease, opacity 0.3s ease; /* Transición para la animación */
+        }
+
+        .pulse {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.15); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.8; }
+        }
+
+        .setup-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            text-align: left; /* Alineado a la izquierda para mejor lectura */
+        }
+
+        .setup-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #FFE082;
+            text-align: center; /* Título centrado */
+        }
+
+        .setup-steps {
+            list-style: none; /* Quita viñetas por defecto */
+        }
+
+        .setup-steps li {
+            margin-bottom: 8px;
+            position: relative;
+            padding-left: 25px; /* Espacio para el ícono */
+        }
+
+        .setup-steps li:before {
+            content: "✓"; /* Ícono de check */
+            position: absolute;
+            left: 0;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        /* Barra de nivel de audio */
+        .audio-level {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 15px 0;
+            border: 1px solid rgba(255, 255, 255, 0.3); /* Borde suave */
+        }
+
+        .audio-level-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A, #CDDC39, #FFC107, #FF5722); /* Degradado de colores */
+            width: 0%;
+            transition: width 0.1s ease, background 0.3s ease; /* Transición para el color y ancho */
+            border-radius: 10px;
+        }
+
+        /* Media queries para responsividad */
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .btn {
+                font-size: 1.1em;
+                padding: 15px 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="https-warning" id="httpsWarning">
+            ⚠️ <strong>ATENCIÓN:</strong> Necesitas HTTPS para usar el micrófono.<br>
+            Sube el archivo a un servidor HTTPS o usa localhost con certificado.
+        </div>
+
+        <div class="offline-ready">
+            📡 <strong>MODO OFFLINE ACTIVADO</strong><br>
+            ¡Funciona sin internet una vez cargado!
+        </div>
+
+        <div class="install-section">
+            📱 <strong>Para usar siempre:</strong><br>
+            • En Chrome: Menú (<span style="font-size: 1.2em; vertical-align: middle;">&#8942;</span>) &rarr; "Instalar aplicación"<br>
+            • En Safari: Compartir (<span style="font-size: 1.2em; vertical-align: middle;">&#x21E7;</span>) &rarr; "Añadir a pantalla de inicio"<br>
+            • Func
