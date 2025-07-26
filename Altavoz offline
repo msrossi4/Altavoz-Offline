@@ -203,13 +203,13 @@
 
         <div class="volume-control">
             <label for="volumeSlider">🔊 Volumen de salida</label>
-            <input type="range" id="volumeSlider" class="volume-slider" min="0" **max="200"** value="100">
+            <input type="range" id="volumeSlider" class="volume-slider" min="0" max="200" value="100">
             <div class="volume-display" id="volumeValue">100%</div>
         </div>
 
         <div class="delay-control">
             <label for="delaySlider">⏱️ Retardo (ms)</label>
-            <input type="range" id="delaySlider" class="delay-slider" min="0" **max="30"** value="10">
+            <input type="range" id="delaySlider" class="delay-slider" min="0" max="30" value="10">
             <div class="delay-display" id="delayValue">10ms</div>
         </div>
     </div>
@@ -258,8 +258,8 @@
             volumeValue.textContent = volume + '%';
             try { localStorage.setItem('amplifierVolume', volume); } catch (e) {}
             if (gainNode && audioContext) {
-                // Curva de ganancia más suave y lineal para evitar saturación: exponente 1.0 (o 1.2 si quieres un poco más de fuerza al final)
-                const gainFactor = Math.pow(volume / 100, **1.0**); 
+                // Curva de ganancia más suave y lineal para evitar saturación
+                const gainFactor = Math.pow(volume / 100, 1.0); 
                 gainNode.gain.setTargetAtTime(gainFactor, audioContext.currentTime, 0.03);
             }
         });
@@ -311,7 +311,7 @@
                 // Configurar ganancia y retardo iniciales
                 const currentVolume = parseInt(volumeSlider.value);
                 // Usamos exponente 1.0 para una curva de ganancia más lineal y controlada
-                const gainFactor = Math.pow(currentVolume / 100, **1.0**); 
+                const gainFactor = Math.pow(currentVolume / 100, 1.0); 
                 gainNode.gain.setValueAtTime(gainFactor, audioContext.currentTime);
 
                 const currentDelay = parseInt(delaySlider.value);
@@ -371,4 +371,52 @@
             }
         }
 
-        // --- Funciones
+        // --- Funciones de Utilidad ---
+        async function resumeAudioContext() {
+            if (audioContext && audioContext.state === 'suspended') {
+                try {
+                    await audioContext.resume();
+                    console.log('AudioContext reanudado.');
+                } catch (e) {
+                    console.error('Error al reanudar AudioContext:', e);
+                }
+            }
+        }
+
+        let wakeLock = null;
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('Wake Lock activado.');
+                } catch (err) {
+                    console.warn('No se pudo activar Wake Lock:', err.name, err.message);
+                }
+            }
+        }
+
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                await requestWakeLock();
+            }
+        });
+
+        // Previene el cierre accidental de la página si el amplificador está activo
+        window.addEventListener('beforeunload', e => {
+            if (isAmplifying) {
+                e.preventDefault();
+                e.returnValue = '¿Seguro que querés cerrar? El amplificador está activo y se detendrá.';
+            }
+        });
+
+        // Service Worker (para PWA y offline) - ¡Recordá crear el archivo sw.js!
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => console.log('Service Worker registrado:', registration))
+                    .catch(error => console.error('Error al registrar Service Worker:', error));
+            });
+        }
+    </script>
+</body>
+</html>
