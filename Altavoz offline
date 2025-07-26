@@ -60,6 +60,16 @@
             color: #FFE082;
         }
 
+        .https-warning {
+            background: rgba(255, 152, 0, 0.2);
+            border: 2px solid rgba(255, 152, 0, 0.5);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+            display: none;
+        }
+
         .offline-ready {
             background: rgba(76, 175, 80, 0.2);
             border: 2px solid rgba(76, 175, 80, 0.5);
@@ -307,6 +317,48 @@
             font-size: 0.9em;
         }
 
+        .delay-control {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .delay-control label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
+        .delay-slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            outline: none;
+            -webkit-appearance: none;
+            margin: 10px 0;
+        }
+
+        .delay-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #9C27B0, #E91E63);
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .delay-display {
+            margin-top: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #E1BEE7;
+        }
+
         @media (max-width: 480px) {
             .container {
                 padding: 20px;
@@ -326,6 +378,11 @@
 </head>
 <body>
     <div class="container">
+        <div class="https-warning" id="httpsWarning">
+            ⚠️ <strong>ATENCIÓN:</strong> Necesitas HTTPS para usar el micrófono.<br>
+            Sube el archivo a un servidor HTTPS o usa localhost con certificado.
+        </div>
+
         <div class="offline-ready">
             📡 <strong>MODO OFFLINE ACTIVADO</strong><br>
             ¡Funciona sin internet una vez cargado!
@@ -345,10 +402,10 @@
         <div class="setup-section">
             <div class="setup-title">🔧 Configuración Rápida</div>
             <ol class="setup-steps">
-                <li>Conecta parlante externo (Bluetooth o cable)</li>
-                <li>Mantén el teléfono cerca de tu boca</li>
-                <li>Ajusta el volumen según tu aula</li>
-                <li>¡Presiona INICIAR y a enseñar!</li>
+                <li><strong>USA AURICULARES</strong> o parlante alejado del micrófono</li>
+                <li>Mantén el teléfono cerca de tu boca (20-30cm)</li>
+                <li>Ajusta volumen bajo al principio</li>
+                <li>¡Presiona INICIAR y aumenta gradualmente!</li>
             </ol>
         </div>
         
@@ -371,17 +428,23 @@
 
         <div class="volume-control">
             <label for="volumeSlider">🔊 Control de Volumen</label>
-            <input type="range" id="volumeSlider" class="volume-slider" min="0" max="100" value="75">
-            <div class="volume-display" id="volumeValue">75%</div>
+            <input type="range" id="volumeSlider" class="volume-slider" min="0" max="100" value="30">
+            <div class="volume-display" id="volumeValue">30%</div>
+        </div>
+
+        <div class="delay-control">
+            <label for="delaySlider">⏱️ Retardo Anti-Feedback (ms)</label>
+            <input type="range" id="delaySlider" class="delay-slider" min="0" max="50" value="10">
+            <div class="delay-display" id="delayValue">10ms</div>
         </div>
 
         <div class="info">
-            <strong>💡 Consejos para mejores resultados:</strong><br><br>
-            • <strong>Distancia ideal:</strong> 20-30 cm del teléfono<br>
-            • <strong>Sin auriculares:</strong> Para evitar retroalimentación<br>
-            • <strong>Parlante externo:</strong> Mejor calidad y volumen<br>
-            • <strong>Prueba primero:</strong> Ajusta volumen antes de clase<br>
-            • <strong>Modo avión + WiFi:</strong> Evita interrupciones por llamadas<br>
+            <strong>💡 Consejos IMPORTANTES:</strong><br><br>
+            • <strong>USA AURICULARES:</strong> Evita retroalimentación (feedback)<br>
+            • <strong>O parlante alejado:</strong> Mínimo 2 metros del micrófono<br>
+            • <strong>Empieza con volumen bajo:</strong> Ve subiendo gradualmente<br>
+            • <strong>HTTPS requerido:</strong> No funciona en HTTP local<br>
+            • <strong>Prueba primero:</strong> Ajusta antes de usar en clase<br>
             • <strong>100% offline:</strong> No necesita internet después de cargar
         </div>
     </div>
@@ -392,6 +455,7 @@
         let microphone;
         let gainNode;
         let analyserNode;
+        let delayNode;
         let isAmplifying = false;
         let animationId;
         let mediaStream;
@@ -401,19 +465,27 @@
         const stopBtn = document.getElementById('stopBtn');
         const volumeSlider = document.getElementById('volumeSlider');
         const volumeValue = document.getElementById('volumeValue');
+        const delaySlider = document.getElementById('delaySlider');
+        const delayValue = document.getElementById('delayValue');
         const micIcon = document.getElementById('micIcon');
         const audioLevelContainer = document.getElementById('audioLevelContainer');
         const audioLevelBar = document.getElementById('audioLevelBar');
+        const httpsWarning = document.getElementById('httpsWarning');
 
-        // Configuración de audio
+        // Verificar HTTPS
+        if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+            httpsWarning.style.display = 'block';
+        }
+
+        // Configuración de audio mejorada
         const audioConfig = {
             audio: {
-                echoCancellation: false,           
-                noiseSuppression: false,          
-                autoGainControl: false,           
+                echoCancellation: true,     // ACTIVADO para reducir feedback
+                noiseSuppression: true,     // ACTIVADO para mejor calidad
+                autoGainControl: false,     // Mantenemos control manual
                 sampleRate: 44100,                
-                channelCount: 1,                  
-                latency: 0.01
+                channelCount: 1,
+                latency: 0.02               // Latencia ligeramente mayor para estabilidad
             }
         };
 
@@ -422,18 +494,32 @@
             const volume = parseInt(this.value);
             volumeValue.textContent = volume + '%';
             
-            // Guardar configuración
             try {
                 localStorage.setItem('amplifierVolume', volume);
             } catch (e) {}
             
             if (gainNode && audioContext) {
-                const gain = Math.pow(volume / 100, 1.5);
-                gainNode.gain.setTargetAtTime(gain, audioContext.currentTime, 0.01);
+                // Curva de volumen más suave para evitar distorsión
+                const gain = Math.pow(volume / 100, 2);
+                gainNode.gain.setTargetAtTime(gain, audioContext.currentTime, 0.03);
             }
         });
 
-        // Visualizador de audio
+        // Control de retardo
+        delaySlider.addEventListener('input', function() {
+            const delay = parseInt(this.value);
+            delayValue.textContent = delay + 'ms';
+            
+            try {
+                localStorage.setItem('amplifierDelay', delay);
+            } catch (e) {}
+            
+            if (delayNode && audioContext) {
+                delayNode.delayTime.setTargetAtTime(delay / 1000, audioContext.currentTime, 0.01);
+            }
+        });
+
+        // Visualizador de audio mejorado
         function updateAudioLevel() {
             if (!analyserNode || !isAmplifying) return;
 
@@ -446,34 +532,59 @@
                 sum += dataArray[i] * dataArray[i];
             }
             const rms = Math.sqrt(sum / bufferLength);
-            const percentage = Math.min((rms / 128) * 100, 100);
+            const percentage = Math.min((rms / 100) * 100, 100);
 
             audioLevelBar.style.width = percentage + '%';
             
-            if (percentage > 80) {
-                audioLevelBar.style.background = 'linear-gradient(90deg, #FF5722, #F44336)';
-            } else if (percentage > 50) {
-                audioLevelBar.style.background = 'linear-gradient(90deg, #FFC107, #FF9800)';
+            // Advertencia visual si el nivel es muy alto (posible feedback)
+            if (percentage > 90) {
+                audioLevelBar.style.background = 'linear-gradient(90deg, #FF1744, #D50000)';
+                statusEl.textContent = '⚠️ NIVEL MUY ALTO - Reduce volumen o aleja parlante';
+                statusEl.className = 'status error';
+            } else if (percentage > 70) {
+                audioLevelBar.style.background = 'linear-gradient(90deg, #FF9800, #F57C00)';
+            } else if (percentage > 30) {
+                audioLevelBar.style.background = 'linear-gradient(90deg, #4CAF50, #388E3C)';
+                if (statusEl.className === 'status error') {
+                    statusEl.textContent = '🔴 ¡AMPLIFICANDO EN VIVO! Habla normalmente';
+                    statusEl.className = 'status active';
+                }
             } else {
-                audioLevelBar.style.background = 'linear-gradient(90deg, #4CAF50, #8BC34A)';
+                audioLevelBar.style.background = 'linear-gradient(90deg, #2196F3, #1976D2)';
             }
 
             animationId = requestAnimationFrame(updateAudioLevel);
         }
 
-        // Función principal de inicio
+        // Función principal de inicio mejorada
         async function startAmplifier() {
             try {
                 statusEl.textContent = '🔄 Iniciando amplificador...';
                 statusEl.className = 'status';
                 startBtn.disabled = true;
 
+                // Verificar soporte
                 if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                     throw new Error('Tu navegador no soporta grabación de audio');
                 }
 
+                // Verificar HTTPS
+                if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+                    throw new Error('Necesitas HTTPS para usar el micrófono');
+                }
+
                 statusEl.textContent = '🎤 Solicitando acceso al micrófono...';
-                mediaStream = await navigator.mediaDevices.getUserMedia(audioConfig);
+                
+                // Intentar diferentes configuraciones si falla la principal
+                let stream;
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia(audioConfig);
+                } catch (e) {
+                    console.warn('Configuración principal falló, probando básica:', e);
+                    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                }
+                
+                mediaStream = stream;
 
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
                 audioContext = new AudioContext({
@@ -481,22 +592,33 @@
                     sampleRate: 44100
                 });
 
+                // Reanudar contexto si está suspendido
                 if (audioContext.state === 'suspended') {
                     await audioContext.resume();
                 }
 
+                // Crear nodos de audio
                 microphone = audioContext.createMediaStreamSource(mediaStream);
                 gainNode = audioContext.createGain();
                 analyserNode = audioContext.createAnalyser();
+                delayNode = audioContext.createDelay(0.1); // Máximo 100ms de delay
 
-                analyserNode.fftSize = 512;
-                analyserNode.smoothingTimeConstant = 0.7;
+                // Configurar analizador
+                analyserNode.fftSize = 1024;
+                analyserNode.smoothingTimeConstant = 0.8;
 
+                // Configurar ganancia inicial (baja para seguridad)
                 const currentVolume = parseInt(volumeSlider.value);
-                const gain = Math.pow(currentVolume / 100, 1.5);
+                const gain = Math.pow(currentVolume / 100, 2);
                 gainNode.gain.setValueAtTime(gain, audioContext.currentTime);
 
-                microphone.connect(gainNode);
+                // Configurar delay
+                const currentDelay = parseInt(delaySlider.value);
+                delayNode.delayTime.setValueAtTime(currentDelay / 1000, audioContext.currentTime);
+
+                // Conectar nodos: micrófono -> delay -> ganancia -> analizador -> salida
+                microphone.connect(delayNode);
+                delayNode.connect(gainNode);
                 gainNode.connect(analyserNode);
                 gainNode.connect(audioContext.destination);
 
@@ -522,13 +644,15 @@
             let errorMessage = '❌ Error: ';
             
             if (error.name === 'NotAllowedError') {
-                errorMessage += 'Necesitas permitir acceso al micrófono. Recarga y permite el acceso.';
+                errorMessage += 'Debes permitir acceso al micrófono. Recarga y acepta el permiso.';
             } else if (error.name === 'NotFoundError') {
                 errorMessage += 'No se encontró micrófono. Verifica que tu dispositivo tenga micrófono.';
             } else if (error.name === 'NotSupportedError') {
-                errorMessage += 'Tu navegador no soporta esta función. Usa Chrome o Firefox.';
+                errorMessage += 'Tu navegador no soporta esta función. Usa Chrome o Firefox actualizado.';
             } else if (error.name === 'NotReadableError') {
-                errorMessage += 'El micrófono está siendo usado por otra aplicación.';
+                errorMessage += 'El micrófono está siendo usado por otra aplicación. Ciérrala e intenta de nuevo.';
+            } else if (error.message.includes('HTTPS')) {
+                errorMessage += 'Necesitas usar HTTPS. Sube el archivo a un servidor seguro.';
             } else {
                 errorMessage += error.message || 'No se pudo acceder al micrófono.';
             }
@@ -560,6 +684,7 @@
                 microphone = null;
                 gainNode = null;
                 analyserNode = null;
+                delayNode = null;
                 isAmplifying = false;
 
                 statusEl.textContent = '✅ Amplificador detenido. Listo para reiniciar';
@@ -587,15 +712,29 @@
                     volumeSlider.value = savedVolume;
                     volumeValue.textContent = savedVolume + '%';
                 }
+
+                const savedDelay = localStorage.getItem('amplifierDelay');
+                if (savedDelay) {
+                    delaySlider.value = savedDelay;
+                    delayValue.textContent = savedDelay + 'ms';
+                }
             } catch (e) {}
             
             console.log('📱 Amplificador de Voz cargado y listo');
         });
 
+        // Prevenir cierre accidental
         window.addEventListener('beforeunload', e => {
             if (isAmplifying) {
                 e.preventDefault();
                 e.returnValue = '¿Seguro que quieres cerrar? El amplificador está activo.';
+            }
+        });
+
+        // Manejo de cambios de visibilidad (para móviles)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && isAmplifying) {
+                console.log('⚠️ App minimizada, el amplificador sigue activo');
             }
         });
     </script>
